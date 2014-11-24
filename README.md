@@ -1,4 +1,4 @@
 ghateway
 ========
 
-API Gateway for Github
+API Management Gateway for Github's API
