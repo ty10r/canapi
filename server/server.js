@@ -12,6 +12,7 @@ require( './globals.js' );
 
 
 
+
 //*******************************************
 //* DATABASE INIT
 //*******************************************
@@ -49,11 +50,11 @@ process.on( 'uncaughtException', function( error ) {
 
 
 
-process.env.TZ = 'UTC';
-
 //*******************************************
 //* Server initialization
 //*******************************************
+process.env.TZ = 'UTC';
+
 var app = express();
 // Body parser for parameter reading
 app.use( bodyParser() );
