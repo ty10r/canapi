@@ -3,7 +3,8 @@ var express = require( 'express' ),
     fs = require( 'fs' ),
     cookieParser = require( 'cookie-parser' ),
     bodyParser = require( 'body-parser' ),
-    expressValidator = require( 'express-validator' );
+    expressValidator = require( 'express-validator' ),
+    _       = require( 'underscore' );
 
 //*******************************************
 //* GLOBAL VARS (accessible from anywhere)
@@ -53,8 +54,7 @@ process.on( 'uncaughtException', function( error ) {
 //*******************************************
 //* Server initialization
 //*******************************************
-process.env.TZ = 'UTC';
-
+// Setup all middleware
 var app = express();
 // Body parser for parameter reading
 app.use( bodyParser() );
@@ -62,6 +62,21 @@ app.use( bodyParser() );
 app.use( cookieParser() );
 // Validator which will help with validating request params
 app.use( expressValidator() );
+
+
+// Include all api files
+var apiDir = fs.readdirSync( __dirname + '/api' );
+_.filter( apiDir, function( libFile ) {
+    if ( !fs.statSync( __dirname + '/api/' + libFile ).isDirectory() && libFile.indexOf( '.js' ) !== -1 && libFile != 'API.js' ) {
+        console.log( 'Binding API Class: ' + libFile );
+              console.log()
+
+      require( __dirname + '/api/' + libFile ).bind( app );
+    }
+});
+
+process.env.TZ = 'UTC';
+
 
 
 

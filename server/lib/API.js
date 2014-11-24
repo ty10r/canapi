@@ -7,12 +7,7 @@ var fs = require( 'fs' );
 
 // Generic JSON Response
 var JsonResponse = exports.JsonResponse = function( params, response, code ) {
-	// var code = code && code !== 200 ? code : 200;
-	var responseObject = params;
-	// {
-	// 	status: code === 200 ? 'success' : 'error',
-	// 	time: new Date(),
-	// 	data: params
-	// };
-	response.json( responseObject, code );
+	var code = code && code !== 200 ? code : 200;
+	response.time = new Date();
+	response.status( code ).json( params );
 };
