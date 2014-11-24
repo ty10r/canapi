@@ -1,4 +1,5 @@
 var express = require( 'express' ),
+    router = express.Router(),
     mongoose = require( 'mongoose' ),
     fs = require( 'fs' ),
     cookieParser = require( 'cookie-parser' ),
@@ -83,11 +84,22 @@ process.env.TZ = 'UTC';
 //*******************************************
 //* Server Start
 //*******************************************
-app.listen( CONFIG.port, function( error ) {
-  if ( error ) {
-    console.error( error );
-  }
-  else {
-    console.log( 'Listening on Port: ' + CONFIG.port );
-  }
+
+// Build out our API proxy endpoints/validation
+var apiProxy = require( __dirname + '/api-proxy.js' );
+var ghProxy = new apiProxy.ApiProxy();
+ghProxy.init( function() {
+
+  // Setup Router middleware, API Proxy Gate, then listen
+  app.use('/', router);
+  app.listen( CONFIG.port, function( error ) {
+    if ( error ) {
+      console.error( error );
+    }
+    else {
+      console.log( 'Listening on Port: ' + CONFIG.port );
+    }
+  });
 });
+
+
