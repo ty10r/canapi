@@ -87,7 +87,7 @@ process.env.TZ = 'UTC';
 
 // Build out our API proxy endpoints/validation
 var apiProxy = require( __dirname + '/api-proxy.js' );
-var ghProxy = new apiProxy.ApiProxy();
+var ghProxy = new apiProxy.ApiProxy( router );
 ghProxy.init( function() {
 
   // Setup Router middleware, API Proxy Gate, then listen

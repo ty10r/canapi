@@ -6837,7 +6837,7 @@ traits:
         uriParameters:
           shaCode:
             description: Id of the owner.
-            type: integer
+            type: string
         type: item
         get:
           description: Get a Tree.
@@ -20112,6 +20112,13 @@ traits:
                 }
               ]
     /{ownerId}/{repoId}:
+      uriParameters:
+        ownerId:
+          description: Id of the owner.
+          type: integer
+        repoId:
+          description: Id of repository.
+          type: integer
       type: base
       get:
         description: Check if you are starring a repository.

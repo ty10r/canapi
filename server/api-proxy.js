@@ -5,53 +5,83 @@ var api = require(API_CORE),
 // Loads GH api data and creates request rules based on it
 //
 var ApiProxy = exports.ApiProxy = function( router ) {
+	this.router = router;
 	this.apiSchema = {};
-	this.uriParamRegex = /\/\{[^\}]+\}$/;
+	this.INVPATHERROR = "Invalid API path";
+
+	// Store URI validation functions to stop from creating redundant middleware
+	this.URIParamTypes = {};
 }
 
 ApiProxy.prototype.init = function ( callback ) {
 	var scope = this;
+
 	raml.loadFile( 'github.raml' ).then( function( data ) {
 		scope.apiSchema = data;
-		scope.generateURIValidation();
+		scope.generateValidation();
 		callback();
 	}, function( error ) {
-		console.log( "Error while loading github.raml...exiting" );
 		process.exit(1);
 	});
 };
 
 // Post-order traverse of Resource tree
 ApiProxy.prototype.traverseResTree = function( res, fn ) {
-	fn( res );
-	if (!res.resources) return;
-
-	for ( var i = 0; i < res.resources.length; i++ ) {
-		this.traverseResTree( res.resources[i], fn );
+	if ( res.resources !== undefined ) {
+		for ( var i = 0; i < res.resources.length; i++ ) {
+			this.traverseResTree( res.resources[i], fn );
+		}
 	}
+	fn( res );
+	return;
 };
 
-function validateResource( res ) {
+ApiProxy.prototype.validateResource = function ( res ) {
 	if ( ! res.relativeUri ) return;
 
-		// Extract uriParameters so we can make validation rules for them
-	var uriTest = uriParamRegex.exec( res.relativeUri );
-	if ( uriTest !== null ) {
-		var uriParamName = uriTest[0].substr( uriTest.index, uriTest[0].length - 2 );
-		console.log(uriParamName);
+	if ( res.uriParameters ) {
+		for ( key in res.uriParameters ) {
+			this.validateURIParam( key, res.uriParameters[key].type );
+		}
 	}
+	return;
 }
 
-ApiProxy.prototype.generateURIValidation = function() {
-	console.log('in generate');
-	// Uses router middleware to generate validation scheme
-	// for URI parameters
 
-	// TODO/PITFALL: This relies on a REST API not to define
-	// multiple URI Parameters with the same name, but different type
+//******************************************************
+//* Middleward Generation
+//* Section is to generate middle-ware for URI parameter
+//* type checking
+//******************************************************
 
-	// TODO: fix support for Base URI Parameters
+ApiProxy.prototype.generateValidation = function() {
 
-	this.traverseResTree( this.apiSchema, validateResource )
+	this.traverseResTree( this.apiSchema, this.validateResource.bind(this) )
 
 };
+
+ApiProxy.prototype.validateURIParam = function ( param, type ) {
+	var scope = this;
+	// Don't create redundant uri validation middleware
+	if ( scope.URIParamTypes[param] === type ) return;
+
+	scope.URIParamTypes[param] = type;
+	scope.router.param( param, function( req, res, next, paramValue ) {
+		scope.validateURIStrInt( paramValue, ( type == 'integer' ) );
+		req[param] = paramValue;
+		next();
+	});
+};
+
+// TODO: Check if APIs often have string/int listed as a string parameter
+// Ex api.com/{string}/bar becomes api.com/foo123/bar or only api.com/foo/bar
+ApiProxy.prototype.validateURIStrInt = function ( param, isInt ) {
+	if ( ( isInt && isNaN( param ) ) || ( !isInt && !isNaN( param ) ) ) {
+		this.respondInvPath();
+		return;
+	}
+};
+
+ApiProxy.prototype.respondInvPath = function( ) {
+	api.JsonResponse(this.INVPATHERROR, {}, 400 );
+}
