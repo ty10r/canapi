@@ -1,13 +1,16 @@
 var api = require(API_CORE),
 		raml = require( 'raml-parser' );
 
+
+var INVPATHERROR 			= "Invalid API path",
+ 		INVPARAMERROR 		= "Invalid Query Parameter value",
+ 		MISSINGPARAMERROR = "Missing Query Parameter ";
 // Class: ApiProxy
 // Loads GH api data and creates request rules based on it
 //
 var ApiProxy = exports.ApiProxy = function( router ) {
 	this.router = router;
 	this.apiSchema = {};
-	this.INVPATHERROR = "Invalid API path";
 
 	// Regexes for fixing path formats
 	this.uriParamRegex = /\/\{[^\}]+\}/;
@@ -26,7 +29,7 @@ ApiProxy.prototype.init = function ( callback ) {
 		scope.generateAPI();
 		callback();
 	}, function( error ) {
-		process.exit(1);
+		callback(error);
 	});
 };
 
@@ -57,23 +60,40 @@ ApiProxy.prototype.buildEndpoint = function( res, absPath ) {
 	// Create actual endpoint
 	if ( 'methods' in res ) {
 		for ( var i = 0; i < res.methods.length; i++ ) {
-			this.makeRoute( absPath, res.methods[i].method, res );
+			if ( 'queryParameters' in res.methods[i] ) {
+
+			}
+			this.makeRoute( absPath, res.methods[i], res );
 		}
 	}
 
 }
 
-ApiProxy.prototype.makeRoute = function( absPath, method, res ) {
-	if ( method === 'get' ) {
+ApiProxy.prototype.makeRoute = function( absPath, methodObj ) {
+	var scope = this;
+	if ( methodObj.method === 'get' ) {
+
+		var getParamValidators = {};
+		for ( paramName in methodObj.queryParameters ) {
+			getParamValidators[paramName] = this.makeValidatorList( methodObj.queryParameters[paramName] );
+		}
+
 		this.router.get( absPath, function( request, response ) {
-			// TODO: validate reqest params
 			// TODO: make call to actual endpoint
 			// TODO: return response
-			console.log( 'You got ' + absPath );
+			var invalidParams = scope.validateQuery( request.query, getParamValidators );
+			if ( invalidParams ) {
+				api.JsonResponse( 'Errors: ' + invalidParams, response, 400 );
+				return;
+			}
+
 			api.JsonResponse( 'Get request recieved @: ' + absPath, response, 200 );
 			return;
 		});
-	} else if ( method === 'post' ) {
+
+
+
+	} else if ( methodObj.method === 'post' ) {
 		this.router.post( absPath, function( request, response ) {
 			// TODO: validate post params
 			// TODO: make call to actual endpoint
@@ -84,6 +104,58 @@ ApiProxy.prototype.makeRoute = function( absPath, method, res ) {
 		});
 	}
 }
+
+// Uses list of validator functions on query parameters
+// Returns undefined if all valid, string errors otherwise
+ApiProxy.prototype.validateQuery = function( query, validators ) {
+	var validationErrors = [];
+	for ( paramName in validators ) {
+		validators[paramName].forEach( function( validator ) {
+			var paramError = validator( query[paramName] );
+			if ( paramError ) validationErrors.push(paramName + ' : ' + paramError);
+		})
+	}
+	if (validationErrors.length == 0) return undefined;
+	return validationErrors;
+}
+
+ApiProxy.prototype.makeValidatorList = function( queryRules ) {
+	var validators = [];
+	// Required parameter validator
+	if ( queryRules.required && !queryRules.default ) {
+		validators.push( function( paramValue ) {
+			if ( !paramValue ) {
+				return MISSINGPARAMERROR;
+			}
+			return undefined;
+		});
+	}
+	// Enum values validator
+	if ( queryRules.enum ) {
+		validators.push( this.generateEnumValidator( queryRules.type.enum, queryRules.required) );
+	}
+	// TODO Check if I need to validate string param type in anyway
+	return validators;
+}
+
+ApiProxy.prototype.generateEnumValidator = function( enumList, isRequired ) {
+	var validateEnum = function( enumList, paramValue ) {
+		if ( !isRequired && !paramValue ) return undefined;
+
+		var isCorrect = false;
+		for ( var i = 0; i < enumList.length; i++ ) {
+			if ( paramValue == enumList[i] ) isCorrect = true;
+		}
+		if ( !isCorrect ) {
+			return INVPARAMERROR;
+		}
+
+		return undefined;
+	}
+	return validateEnum;
+}
+
+
 
 //******************************************************
 //* Middleward Generation
@@ -111,23 +183,15 @@ ApiProxy.prototype.validateURIParam = function ( param, type ) {
 
 	scope.URIParamTypes[param] = type;
 	scope.router.param( param, function( req, res, next, paramValue ) {
-		scope.validateURIStrInt( paramValue, ( type == 'integer' ) );
+		scope.validateStrInt( paramValue, ( type == 'integer' ) );
 		req[param] = paramValue;
 		next();
 	});
 };
 
-// TODO: Check if APIs often have string/int listed as a string parameter
-// Ex api.com/{string}/bar becomes api.com/foo123/bar or only api.com/foo/bar
-ApiProxy.prototype.validateURIStrInt = function ( param, isInt ) {
-	if ( ( isInt && isNaN( param ) ) || ( !isInt && !isNaN( param ) ) ) {
-		this.respondInvPath();
-		return;
-	}
-};
 
 ApiProxy.prototype.respondInvPath = function( ) {
-	api.JsonResponse(this.INVPATHERROR, {}, 400 );
+	api.JsonResponse(INVPATHERROR, {}, 400 );
 }
 
 
@@ -141,3 +205,12 @@ ApiProxy.prototype.formatUriSegment = function ( uriSegment ) {
 	return uriSegment.replace(this.obReg, '/:').replace(this.cbReg, '');
 
 }
+
+// TODO: Check if APIs often have string/int listed as a string parameter
+// Ex api.com/{string}/bar becomes api.com/foo123/bar or only api.com/foo/bar
+ApiProxy.prototype.validateStrInt = function ( param, isInt ) {
+	if ( ( isInt && isNaN( param ) ) || ( !isInt && !isNaN( param ) ) ) {
+		this.respondInvPath();
+		return;
+	}
+};

@@ -21267,6 +21267,18 @@ traits:
               - sources
               - member
             default: all
+          sort:
+            enum:
+              - created
+              - updated
+              - pushed
+              - full_name
+            default: full_name
+          direction:
+            enum:
+              - asc
+              - desc
+            default: desc
         responses:
           200:
             body:

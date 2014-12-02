@@ -69,9 +69,7 @@ app.use( expressValidator() );
 var apiDir = fs.readdirSync( __dirname + '/api' );
 _.filter( apiDir, function( libFile ) {
     if ( !fs.statSync( __dirname + '/api/' + libFile ).isDirectory() && libFile.indexOf( '.js' ) !== -1 && libFile != 'API.js' ) {
-        console.log( 'Binding API Class: ' + libFile );
-              console.log()
-
+      console.log( 'Binding API Class: ' + libFile );
       require( __dirname + '/api/' + libFile ).bind( app );
     }
 });
@@ -88,7 +86,8 @@ process.env.TZ = 'UTC';
 // Build out our API proxy endpoints/validation
 var apiProxy = require( __dirname + '/api-proxy.js' );
 var ghProxy = new apiProxy.ApiProxy( router );
-ghProxy.init( function() {
+ghProxy.init( function( error ) {
+  if ( error ) console.log( error );
 
   // Setup Router middleware, API Proxy Gate, then listen
   app.use('/', router);
