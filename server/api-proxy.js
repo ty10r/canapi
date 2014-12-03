@@ -1,13 +1,16 @@
 var api = require(API_CORE),
-		raml = require( 'raml-parser' );
+		raml = require( 'raml-parser' )
+		REQUEST = require( 'request' );
 
 
 var INVPATHERROR 			= "Invalid API path",
  		INVPARAMERROR 		= "Invalid Query Parameter value",
  		MISSINGPARAMERROR = "Missing Query Parameter ";
+
+
 // Class: ApiProxy
 // Loads GH api data and creates request rules based on it
-//
+// Validates all get request parameters. Extraneous parameters are ignored
 var ApiProxy = exports.ApiProxy = function( router ) {
 	this.router = router;
 	this.apiSchema = {};
@@ -26,6 +29,8 @@ ApiProxy.prototype.init = function ( callback ) {
 
 	raml.loadFile( 'github.raml' ).then( function( data ) {
 		scope.apiSchema = data;
+		scope.baseUri = scope.apiSchema.baseUri;
+		scope.localBaseUri = '/api-github-com'; 	// TODO: replace this with general base
 		scope.generateAPI();
 		callback();
 	}, function( error ) {
@@ -49,20 +54,16 @@ ApiProxy.prototype.traverseResTree = function( res, fn, absPath ) {
 // Generate whole list of endpoints and validation
 ApiProxy.prototype.generateAPI = function() {
 
-	this.traverseResTree( this.apiSchema, this.buildEndpoint.bind(this), '/api-github-com' )
+	this.traverseResTree( this.apiSchema, this.buildEndpoint.bind(this), this.localBaseUri )
 
 };
 
 ApiProxy.prototype.buildEndpoint = function( res, absPath ) {
 	// Do validation of uri params
 	this.validateResource( res );
-
 	// Create actual endpoint
 	if ( 'methods' in res ) {
 		for ( var i = 0; i < res.methods.length; i++ ) {
-			if ( 'queryParameters' in res.methods[i] ) {
-
-			}
 			this.makeRoute( absPath, res.methods[i], res );
 		}
 	}
@@ -71,24 +72,26 @@ ApiProxy.prototype.buildEndpoint = function( res, absPath ) {
 
 ApiProxy.prototype.makeRoute = function( absPath, methodObj ) {
 	var scope = this;
+	var remoteURI = scope.baseUri + absPath.replace( this.localBaseUri + '/', '' ); // TODO: Make more standard, validate baseURI from raml
 	if ( methodObj.method === 'get' ) {
-
+		// Setup getParamValidation object
 		var getParamValidators = {};
 		for ( paramName in methodObj.queryParameters ) {
 			getParamValidators[paramName] = this.makeValidatorList( methodObj.queryParameters[paramName] );
 		}
-
+		// Create actual get endpoint
 		this.router.get( absPath, function( request, response ) {
-			// TODO: make call to actual endpoint
-			// TODO: return response
 			var invalidParams = scope.validateQuery( request.query, getParamValidators );
 			if ( invalidParams ) {
 				api.JsonResponse( 'Errors: ' + invalidParams, response, 400 );
 				return;
 			}
-
-			api.JsonResponse( 'Get request recieved @: ' + absPath, response, 200 );
-			return;
+			// make call to actual endpoint
+			scope.makeGetRequestTo( remoteURI, request.query, function( error, res, body) {
+				// return response
+				api.JsonResponse( body, response, res.statusCode );
+				return;
+			});
 		});
 
 
@@ -214,3 +217,20 @@ ApiProxy.prototype.validateStrInt = function ( param, isInt ) {
 		return;
 	}
 };
+
+// Utility request to the remote of your choice
+ApiProxy.prototype.makeGetRequestTo = function( url, params, callback ) {
+	var fullUrl = url;
+	if ( params ) fullUrl += '?'
+	for ( param in params ) {
+		fullUrl += ( param + '=' + params[param] + '&' );
+	}
+	this.makeRequestTo( fullUrl, callback );
+}
+
+ApiProxy.prototype.makeRequestTo = function ( url, callback ) {
+	var options = {
+		url: url, headers: { 'User-Agent': 'node.js' }
+	};
+	REQUEST( options, callback );
+}

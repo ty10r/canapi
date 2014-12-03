@@ -5,7 +5,8 @@ var express = require( 'express' ),
     cookieParser = require( 'cookie-parser' ),
     bodyParser = require( 'body-parser' ),
     expressValidator = require( 'express-validator' ),
-    _       = require( 'underscore' );
+    _       = require( 'underscore' )
+    REQUEST = require( 'request' );
 
 //*******************************************
 //* GLOBAL VARS (accessible from anywhere)
@@ -75,8 +76,6 @@ _.filter( apiDir, function( libFile ) {
 });
 
 process.env.TZ = 'UTC';
-
-
 
 
 //*******************************************
