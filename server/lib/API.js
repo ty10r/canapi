@@ -11,3 +11,10 @@ var JsonResponse = exports.JsonResponse = function( params, response, code ) {
 	response.time = new Date();
 	response.status( code ).json( params );
 };
+
+// Generic server error Response
+var ServerErrorResponse = exports.ServerErrorResponse = function( error, response ) {
+	console.error( error );
+	JsonResponse( error, response, 500 );
+	return;
+}
