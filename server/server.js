@@ -1,12 +1,11 @@
 var express = require( 'express' ),
-    router = express.Router(),
     mongoose = require( 'mongoose' ),
     fs = require( 'fs' ),
     cookieParser = require( 'cookie-parser' ),
     bodyParser = require( 'body-parser' ),
     expressValidator = require( 'express-validator' ),
-    _       = require( 'underscore' )
-    REQUEST = require( 'request' );
+    _       = require( 'underscore' ),
+    async = require('async');
 
 //*******************************************
 //* GLOBAL VARS (accessible from anywhere)
@@ -83,21 +82,50 @@ process.env.TZ = 'UTC';
 //*******************************************
 
 // Build out our API proxy endpoints/validation
-var apiProxy = require( __dirname + '/api-proxy.js' );
-var ghProxy = new apiProxy.ApiProxy( router );
-ghProxy.init( function( error ) {
-  if ( error ) console.log( error );
 
-  // Setup Router middleware, API Proxy Gate, then listen
-  app.use('/', router);
-  app.listen( CONFIG.port, function( error ) {
-    if ( error ) {
-      console.error( error );
+
+var apiProxy = require( __dirname + '/api-proxy.js' );
+var router = express.Router();
+var ghProxy = new apiProxy.ApiProxy( router );
+
+// Setup API proxies for each API listed in CONFIG
+CONFIG.APIS.forEach( function( API ) {
+  var aRouter = express.Router();
+  var aProxy = new apiProxy.ApiProxy( aRouter );
+
+  // Verify config API structure
+  if ( !API.raml || !API.localPath ) {
+    console.error("API Configuration must be of schema: ");
+    console.error( "APIS: [ {raml: 'file.raml', localPath: '/desiredPath'} ]");
+    process.exit(1);
+  }
+
+  // Must be performed in series, INIT an api proxy then use it's router
+  async.series([
+    function( callback ) {
+      aProxy.init( API.raml, API.localPath, function( error ) {
+        if ( error ) {
+          console.error( error );
+          process.exit(1);
+        }
+        callback(null, null);
+      });
+    },
+
+    function( callback ) {
+      app.use( API.localPath, aRouter );
+      callback(null, null);
     }
-    else {
-      console.log( 'Listening on Port: ' + CONFIG.port );
-    }
-  });
+
+  ]);
 });
 
+app.listen( CONFIG.port, function( error ) {
+  if ( error ) {
+    console.error( error );
+  }
+  else {
+    console.log( 'Listening on Port: ' + CONFIG.port );
+  }
+});
 

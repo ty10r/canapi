@@ -24,18 +24,31 @@ var ApiProxy = exports.ApiProxy = function( router ) {
 	this.URIParamTypes = {};
 }
 
-ApiProxy.prototype.init = function ( callback ) {
+ApiProxy.prototype.init = function ( ramlFile, localPath, callback ) {
 	var scope = this;
 
-	raml.loadFile( 'github.raml' ).then( function( data ) {
+	raml.loadFile( ramlFile ).then( function( data ) {
 		scope.apiSchema = data;
 		scope.baseUri = scope.apiSchema.baseUri;
-		scope.localBaseUri = '/api-github-com'; 	// TODO: replace this with general base
+		// format baseUri
+		if( scope.baseUri.indexOf('/', scope.baseUri.length - 1) !== -1 ) {
+			scope.baseUri = scope.baseUri.substring( 0, scope.baseUri.length - 1 );
+		}
+
+		scope.localBaseUri = localPath; 	// TODO: replace this with general base
 		scope.generateAPI();
 		callback();
 	}, function( error ) {
 		callback(error);
 	});
+};
+
+
+// Generate whole list of endpoints and validation
+ApiProxy.prototype.generateAPI = function() {
+
+	this.traverseResTree( this.apiSchema, this.buildEndpoint.bind(this), '' )
+
 };
 
 // Post-order traverse of Resource tree
@@ -51,12 +64,6 @@ ApiProxy.prototype.traverseResTree = function( res, fn, absPath ) {
 	return;
 };
 
-// Generate whole list of endpoints and validation
-ApiProxy.prototype.generateAPI = function() {
-
-	this.traverseResTree( this.apiSchema, this.buildEndpoint.bind(this), this.localBaseUri )
-
-};
 
 ApiProxy.prototype.buildEndpoint = function( res, absPath ) {
 	// Do validation of uri params
@@ -73,6 +80,7 @@ ApiProxy.prototype.buildEndpoint = function( res, absPath ) {
 ApiProxy.prototype.makeRoute = function( absPath, methodObj ) {
 	var scope = this;
 	var remoteURI = scope.baseUri + absPath.replace( this.localBaseUri + '/', '' ); // TODO: Make more standard, validate baseURI from raml
+
 	if ( methodObj.method === 'get' ) {
 		// Setup getParamValidation object
 		var getParamValidators = {};

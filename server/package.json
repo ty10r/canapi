@@ -14,7 +14,8 @@
 		"mongoose": ">=3.6",
     "mongoose-unique-validator": "0.4.1",
     "underscore": "1.4.4",
-    "crypto": "0.0.3"
+    "crypto": "0.0.3",
+    "async": "0.9.0"
 	},
 	"engine": "node >= 0.10.3"
 }
