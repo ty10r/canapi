@@ -24,10 +24,10 @@ var ApiProxy = exports.ApiProxy = function( router ) {
 	this.URIParamTypes = {};
 }
 
-ApiProxy.prototype.init = function ( ramlFile, localPath, callback ) {
+ApiProxy.prototype.init = function ( config, callback ) {
 	var scope = this;
 
-	raml.loadFile( ramlFile ).then( function( data ) {
+	raml.loadFile( config.raml ).then( function( data ) {
 		scope.apiSchema = data;
 		scope.baseUri = scope.apiSchema.baseUri;
 		// format baseUri
@@ -35,8 +35,15 @@ ApiProxy.prototype.init = function ( ramlFile, localPath, callback ) {
 			scope.baseUri = scope.baseUri.substring( 0, scope.baseUri.length - 1 );
 		}
 
-		scope.localBaseUri = localPath; 	// TODO: replace this with general base
+		scope.localBaseUri = config.localPath; 	// TODO: replace this with general base
 		scope.generateAPI();
+
+		// Check config for requiring login for this api
+		if ( config.loginRequired ) {
+			var loginMiddleware = this.requireLogin();
+			this.router.use( loginMiddleware );
+		}
+
 		callback();
 	}, function( error ) {
 		callback(error);
@@ -203,6 +210,36 @@ ApiProxy.prototype.validateURIParam = function ( param, type ) {
 
 ApiProxy.prototype.respondInvPath = function( ) {
 	api.JsonResponse(INVPATHERROR, {}, 400 );
+}
+
+//********************************************************
+//* User Required Middleware
+//* If an API is configured to be login protected, we will
+//* load this widdleware
+//********************************************************
+ApiProxy.prototype.requireLogin = function() {
+	var mongoose = require( 'mongoose' );
+	var User = mongoose.model( 'User' );
+	var UserRequiredApi = function( request, response, next ) {
+		if ( !request.cookies || !request.cookies.authToken ) {
+			next();
+			return;
+		}
+
+		var user = User.findOne({ authToken: request.cookies.authToken },
+										function( error, user ) {
+											if ( error ) {
+												api.ServerErrorResponse( error, response );
+												return;
+											}
+											request.user = user;
+		});
+		if ( !request.user ) {
+			api.JsonResponse( "That requires authorization.", response, 403 );
+			return;
+		}
+	};
+	return UserRequiredApi;
 }
 
 

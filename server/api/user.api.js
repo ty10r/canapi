@@ -4,28 +4,6 @@ var mongoose = require( 'mongoose' ),
 		Utils = require( UTILS_PATH ),
 		express = require( 'express' );
 
-//*********************************************
-//* Request Audits for auth protected endpoints
-//*********************************************
-var UserRequiredApi = function( request, response, next ) {
-	if ( !request.cookies || !request.cookies.authToken ) {
-		next();
-		return;
-	}
-
-	var user = User.findOne({ authToken: request.cookies.authToken },
-									function( error, user ) {
-										if ( error ) {
-											api.JsonResponse( error, response, 500 );
-											return;
-										}
-										request.user = user;
-	});
-	if ( !request.user ) {
-		api.JsonResponse( "That requires authorization.", response, 403 );
-		return;
-	}
-};
 
 //*********************************************
 //* User API Endpoints

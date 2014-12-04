@@ -86,7 +86,6 @@ process.env.TZ = 'UTC';
 
 var apiProxy = require( __dirname + '/api-proxy.js' );
 var router = express.Router();
-var ghProxy = new apiProxy.ApiProxy( router );
 
 // Setup API proxies for each API listed in CONFIG
 CONFIG.APIS.forEach( function( API ) {
@@ -103,7 +102,7 @@ CONFIG.APIS.forEach( function( API ) {
   // Must be performed in series, INIT an api proxy then use it's router
   async.series([
     function( callback ) {
-      aProxy.init( API.raml, API.localPath, function( error ) {
+      aProxy.init( API, function( error ) {
         if ( error ) {
           console.error( error );
           process.exit(1);
