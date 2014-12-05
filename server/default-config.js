@@ -5,14 +5,16 @@ var config = {
 		{
 			name: 'Github',
 			raml: 'github.raml',
-			localPath: '/api-github-com'
-			// loginRequired: 'true'
+			localPath: '/api-github-com',
+			// loginRequired: 'true',
+			access_token: 'asdf'
 		},
 		{
 			name: 'Instagram',
 			raml: 'instagram.raml',
 			localPath: '/api-instagram-com'
-			// loginRequired: 'true'
+			// loginRequired: 'true',
+			// access_token: 'asdf'
 		}
 	]
 

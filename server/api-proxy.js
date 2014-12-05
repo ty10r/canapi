@@ -22,6 +22,9 @@ var ApiProxy = exports.ApiProxy = function( router ) {
 
 	// Store URI validation functions to stop from creating redundant middleware
 	this.URIParamTypes = {};
+
+	// Hold configuration for this api
+	this.config = {};
 }
 
 ApiProxy.prototype.init = function ( config, callback ) {
@@ -39,6 +42,7 @@ ApiProxy.prototype.init = function ( config, callback ) {
 		scope.generateAPI();
 
 		// Check config for requiring login for this api
+		scope.config = config;
 		if ( config.loginRequired ) {
 			var loginMiddleware = this.requireLogin();
 			this.router.use( loginMiddleware );
@@ -88,6 +92,17 @@ ApiProxy.prototype.makeRoute = function( absPath, methodObj ) {
 	var scope = this;
 	var remoteURI = scope.baseUri + absPath.replace( this.localBaseUri + '/', '' ); // TODO: Make more standard, validate baseURI from raml
 
+	// Check if OAuth verification required
+	var oauthReq = false;
+	if ( methodObj.securedBy ) {
+		oauthReq = true;
+		for ( var i = 0; i < methodObj.securedBy.length; i++ ) {
+			if ( methodObj.securedBy[i] === null ) {
+				oauthReq = false;
+			}
+		}
+	}
+
 	if ( methodObj.method === 'get' ) {
 		// Setup getParamValidation object
 		var getParamValidators = {};
@@ -96,13 +111,23 @@ ApiProxy.prototype.makeRoute = function( absPath, methodObj ) {
 		}
 		// Create actual get endpoint
 		this.router.get( absPath, function( request, response ) {
+			// Validate query parameters
 			var invalidParams = scope.validateQuery( request.query, getParamValidators );
 			if ( invalidParams ) {
 				api.JsonResponse( 'Errors: ' + invalidParams, response, 400 );
 				return;
 			}
+
+			// Check security requirements, include necessary tokens
+			if ( oauthReq ) {
+				var authorized = scope.attachOauth( request, response );
+				if ( !authorized ) {
+					return;
+				}
+			}
 			// make call to actual endpoint
 			scope.makeGetRequestTo( remoteURI, request.query, function( error, res, body) {
+				if ( error ) console.log( error );
 				// return response
 				api.JsonResponse( body, response, res.statusCode );
 				return;
@@ -113,6 +138,15 @@ ApiProxy.prototype.makeRoute = function( absPath, methodObj ) {
 
 	} else if ( methodObj.method === 'post' ) {
 		this.router.post( absPath, function( request, response ) {
+
+			// Check security requirements, include necessary tokens
+			if ( oauthReq ) {
+				var authorized = scope.attachOauth( request, response );
+				if ( !authorized ) {
+					return;
+				}
+			}
+
 			// TODO: validate post params
 			// TODO: make call to actual endpoint
 			// TODO: return response
@@ -232,14 +266,23 @@ ApiProxy.prototype.requireLogin = function() {
 												api.ServerErrorResponse( error, response );
 												return;
 											}
-											request.user = user;
+											request.canapiUser = user;
 		});
-		if ( !request.user ) {
+		if ( !request.canapiUser ) {
 			api.JsonResponse( "That requires authorization.", response, 403 );
 			return;
 		}
 	};
 	return UserRequiredApi;
+}
+
+ApiProxy.prototype.attachOauth = function( request, response, callback ) {
+	if ( !this.config.access_token ) {
+		api.JsonResponse( "This API requires an OAuth access token. See server configuration", response, 403 );
+		return false;
+	}
+	request.query.access_token = this.config.access_token;
+	return true;
 }
 
 
