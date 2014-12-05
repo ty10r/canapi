@@ -1,6 +1,13 @@
 var crypto = require( 'crypto' )
     REQUEST = require( 'request' );
 
+/**
+ * Utility functions and values needed across the application
+ * @module utils
+ * @exports {Object} Security submodule of security utility functions
+ * @exports {Object} Proxy submodule of proxy utility functions
+*/
+
 var Security = exports.Security = {
 
   makeSalt: function() {
@@ -39,9 +46,6 @@ var Proxy = exports.Proxy = {
     return uriSegment.replace(this.obReg, '/:').replace(this.cbReg, '');
 
   },
-
-  // TODO: Check if APIs often have string/int listed as a string parameter
-  // Ex api.com/{string}/bar becomes api.com/foo123/bar or only api.com/foo/bar
   validateStrInt: function ( param, isInt ) {
     if ( ( isInt && isNaN( param ) ) || ( !isInt && !isNaN( param ) ) ) {
       this.respondInvPath();

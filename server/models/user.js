@@ -2,6 +2,9 @@
 //* USER MODEL
 //* Necessary to link our authentication with
 //* various auth protected APIs
+//* @requires mongoose
+//* @requires mongoose-unique-validator
+//* @requires crypto
 //*******************************************
 var mongoose = require('mongoose'),
     uniqueValidator = require('mongoose-unique-validator'),
