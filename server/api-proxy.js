@@ -38,15 +38,20 @@ ApiProxy.prototype.init = function ( config, callback ) {
 			scope.baseUri = scope.baseUri.substring( 0, scope.baseUri.length - 1 );
 		}
 
-		scope.localBaseUri = config.localPath; 	// TODO: replace this with general base
-		scope.generateAPI();
 
 		// Check config for requiring login for this api
 		scope.config = config;
 		if ( config.loginRequired ) {
-			var loginMiddleware = this.requireLogin();
-			this.router.use( loginMiddleware );
+					console.log( config );
+
+			var loginMiddleware = scope.requireLogin();
+			// console.log(loginMiddleware);
+			scope.router.use( loginMiddleware );
+			// console.log(scope.router);
 		}
+
+		scope.localBaseUri = config.localPath; 	// TODO: replace this with general base
+		scope.generateAPI();
 
 		callback();
 	}, function( error ) {
@@ -109,6 +114,8 @@ ApiProxy.prototype.makeRoute = function( absPath, methodObj ) {
 		for ( paramName in methodObj.queryParameters ) {
 			getParamValidators[paramName] = this.makeValidatorList( methodObj.queryParameters[paramName] );
 		}
+
+
 		// Create actual get endpoint
 		this.router.get( absPath, function( request, response ) {
 			// Validate query parameters
@@ -252,11 +259,14 @@ ApiProxy.prototype.respondInvPath = function( ) {
 //* load this widdleware
 //********************************************************
 ApiProxy.prototype.requireLogin = function() {
+	console.log( 'requiring usermodels');
 	var mongoose = require( 'mongoose' );
 	var User = mongoose.model( 'User' );
+	console.log('required usermodels');
 	var UserRequiredApi = function( request, response, next ) {
+		console.log('checking userRequired');
 		if ( !request.cookies || !request.cookies.authToken ) {
-			next();
+			api.JsonResponse( "This API requires Canapi authorization. Register at /register or log-in at /authorize", response, 403 );
 			return;
 		}
 
@@ -269,9 +279,10 @@ ApiProxy.prototype.requireLogin = function() {
 											request.canapiUser = user;
 		});
 		if ( !request.canapiUser ) {
-			api.JsonResponse( "That requires authorization.", response, 403 );
+			api.JsonResponse( "This API requires Canapi authorization. Register at /register or log-in at /authorize", response, 403 );
 			return;
 		}
+		next();
 	};
 	return UserRequiredApi;
 }

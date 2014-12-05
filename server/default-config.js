@@ -6,7 +6,7 @@ var config = {
 			name: 'Github',
 			raml: 'github.raml',
 			localPath: '/api-github-com',
-			// loginRequired: 'true',
+			loginRequired: 'true',
 			access_token: 'asdf'
 		},
 		{
