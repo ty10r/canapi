@@ -1,6 +1,6 @@
 var config = {
 	port: 8000,
-	db: 'mongodb://localhost/ghateway',
+	db: 'mongodb://localhost/canapi',
 	APIS: [
 		{
 			name: 'Github',
