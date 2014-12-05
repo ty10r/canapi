@@ -60,13 +60,33 @@ var Proxy = exports.Proxy = {
     for ( param in params ) {
       fullUrl += ( param + '=' + params[param] + '&' );
     }
-    this.makeRequestTo( fullUrl, callback );
+    this.makeRequestTo( 'GET', fullUrl, callback );
   },
 
-  makeRequestTo: function ( url, callback ) {
+  makePostRequestTo: function( url, body, callback ) {
+    var parameters = {
+      body: body
+    }
+    this.makeRequestTo( 'POST', url, callback, parameters );
+  },
+
+  makePutRequestTo: function( url, callback ) {
+    this.makeRequestTo( 'PUT', url, callback );
+  },
+
+  makeDeleteRequestTo: function( url, callback ) {
+    this.makeRequestTo( 'DELETE', url, callback );
+  },
+
+  makeRequestTo: function ( method, url, callback, parameters ) {
     var options = {
-      url: url, headers: { 'User-Agent': 'node.js' }
+      url: url, headers: { 'User-Agent': 'node.js' }, method: method, json: true
     };
+    if ( parameters ) {
+      for ( parameter in parameters ) {
+        options[parameter] = parameters[parameter];
+      }
+    }
     REQUEST( options, callback );
   }
 };

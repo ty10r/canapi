@@ -14,13 +14,15 @@ var config = {
 	// Optional parameters:
 		// loginRequired: true if you want users to login with Canapi before using the API
 		// access_token: your access token to the API, without it OAuth protected endpoints will not be proxied
+		// logRequests: true if you want to log all requests sent through the proxy
 	APIS: [
 		{
 			name: 'Github',
 			raml: 'github.raml',
 			localPath: '/api-github-com',
-			loginRequired: 'true',
-			access_token: 'asdf'
+			// loginRequired: 'true',
+			access_token: 'asdf',
+			logRequests: 'true'
 		},
 		{
 			name: 'Instagram',

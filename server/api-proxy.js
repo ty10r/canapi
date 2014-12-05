@@ -67,6 +67,10 @@ ApiProxy.prototype.init = function ( config, callback ) {
 
 		scope.localBaseUri = config.localPath; 	// TODO: replace this with general base
 		scope.generateAPI();
+		if ( scope.config.logRequests ) {
+			LogRequests = require( __dirname + '/log-requests.js' );
+			scope.router.use( LogRequests() );
+		}
 
 		callback();
 	}, function( error ) {
@@ -124,9 +128,38 @@ ApiProxy.prototype.traverseResTree = function( res, fn, absPath ) {
  * @param {String} absPath The combination of all uri segments before this node, used to build endpoint paths
 */
 ApiProxy.prototype.buildEndpoint = function( res, absPath ) {
+	var scope = this;
 	// Do validation of uri params
 	this.validateResource( res );
-	// Create actual endpoint
+
+	// Attach API data to all response objects
+	this.router.all( absPath, function( request, response, next ) {
+		response.locals._API = scope.config.name;
+		next();
+	});
+
+	// Check if OAuth verification is required for all methods on this endpoint
+	var oauthReq = false;
+	if ( res.securedBy ) {
+		oauthReq = true;
+		for ( var i = 0; i < res.securedBy.length; i++ ) {
+			if ( res.securedBy[i] === null ) {
+				oauthReq = false;
+			}
+		}
+	}
+	// OAuth required, attach middleware to all methods of this path
+	if ( oauthReq ) {
+		this.router.all( absPath, function( request, response, next ) {
+			var authorized = scope.attachOauth( request, response );
+			if ( !authorized ) {
+				return;
+			}
+			next();
+		});
+	}
+
+	// Create actual method endpoints
 	if ( 'methods' in res ) {
 		for ( var i = 0; i < res.methods.length; i++ ) {
 			this.makeRoute( absPath, res.methods[i], res );
@@ -147,16 +180,6 @@ ApiProxy.prototype.makeRoute = function( absPath, methodObj ) {
 	var scope = this;
 	var remoteURI = scope.baseUri + absPath.replace( this.localBaseUri + '/', '' ); // TODO: Make more standard, validate baseURI from raml
 
-	// Check if OAuth verification required
-	var oauthReq = false;
-	if ( methodObj.securedBy ) {
-		oauthReq = true;
-		for ( var i = 0; i < methodObj.securedBy.length; i++ ) {
-			if ( methodObj.securedBy[i] === null ) {
-				oauthReq = false;
-			}
-		}
-	}
 
 	if ( methodObj.method === 'get' ) {
 		// Setup getParamValidation object
@@ -165,51 +188,60 @@ ApiProxy.prototype.makeRoute = function( absPath, methodObj ) {
 			getParamValidators[paramName] = this.makeValidatorList( methodObj.queryParameters[paramName] );
 		}
 
-
 		// Create actual get endpoint
-		this.router.get( absPath, function( request, response ) {
+		this.router.get( absPath, function( request, response, next ) {
+			response.locals.destination = remoteURI;
 			// Validate query parameters
 			var invalidParams = scope.validateQuery( request.query, getParamValidators );
 			if ( invalidParams ) {
 				api.JsonResponse( 'Errors: ' + invalidParams, response, 400 );
-				return;
+				next();
 			}
 
-			// Check security requirements, include necessary tokens
-			if ( oauthReq ) {
-				var authorized = scope.attachOauth( request, response );
-				if ( !authorized ) {
-					return;
-				}
-			}
-			// make call to actual endpoint
-			ProxyUtils.makeGetRequestTo( remoteURI, request.query, function( error, res, body) {
+			// make call to remote endpoint
+			ProxyUtils.makeGetRequestTo( remoteURI, request.query, function( error, res, body ) {
 				if ( error ) console.log( error );
 				// return response
 				api.JsonResponse( body, response, res.statusCode );
-				return;
+				next();
 			});
 		});
 
 
 
 	} else if ( methodObj.method === 'post' ) {
-		this.router.post( absPath, function( request, response ) {
+		this.router.post( absPath, function( request, response, next ) {
+			response.locals.destination = remoteURI;
+			// @TODO: validate post params
+			ProxyUtils.makePostRequestTo( remoteURI, request.body, function( error, res, body ) {
+				if ( error ) console.log( error );
+				// return response
+				api.JsonResponse( body, response, res.statusCode );
+				next();
+			});
+		});
 
-			// Check security requirements, include necessary tokens
-			if ( oauthReq ) {
-				var authorized = scope.attachOauth( request, response );
-				if ( !authorized ) {
-					return;
-				}
-			}
 
-			// TODO: validate post params
-			// TODO: make call to actual endpoint
-			// TODO: return response
-			console.log( 'You posted to ' + absPath );
-			api.JsonResponse( 'Post recieved @: ' + absPath, response, 200 );
-			return;
+	} else if ( methodObj.method === 'put' ) {
+		this.router.put( absPath, function( request, response, next ) {
+			response.locals.destination = remoteURI;
+			ProxyUtils.makePutRequestTo( remoteURI, function( error, res, body ) {
+				if ( error ) console.log( error );
+				// return response
+				api.JsonResponse( body, response, res.statusCode );
+				next();
+			});
+		})
+
+
+	} else if ( methodObj.method === 'delete' ) {
+		this.router.put( absPath, function( request, response, next ) {
+			response.locals.destination = remoteURI;
+			ProxyUtils.makeDeleteRequestTo( remoteURI, function( err, res, body ) {
+				if ( error ) console.log( error );
+				api.JsonResponse( body, response, res.statusCode );
+				next();
+			});
 		});
 	}
 }

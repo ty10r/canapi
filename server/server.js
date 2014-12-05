@@ -37,6 +37,14 @@ mongoose.connection.on( 'error', function( err ) {
 mongoose.connection.on( 'disconnected', function(err) {
     connect();
 });
+// Handle errors
+mongoose.connection.on( 'error', function(err) {
+    console.log(err);
+});
+// Reconnect on disconnect
+mongoose.connection.on( 'disconnected', function(err) {
+    connect();
+});
 
 // Bootstrap models
 var models_path = __dirname + '/models';
@@ -62,7 +70,7 @@ process.on( 'uncaughtException', function( error ) {
 // Setup all middleware
 var app = express();
 // Body parser for parameter reading
-app.use( bodyParser() );
+app.use( bodyParser.json() );
 // Cookie parser for authentication cookies later
 app.use( cookieParser() );
 // Validator which will help with validating request params

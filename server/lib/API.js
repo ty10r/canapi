@@ -16,5 +16,4 @@ var JsonResponse = exports.JsonResponse = function( params, response, code ) {
 var ServerErrorResponse = exports.ServerErrorResponse = function( error, response ) {
 	console.error( error );
 	JsonResponse( error, response, 500 );
-	return;
 }
