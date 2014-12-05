@@ -1,4 +1,5 @@
-var crypto = require( 'crypto' );
+var crypto = require( 'crypto' )
+    REQUEST = require( 'request' );
 
 var Security = exports.Security = {
 
@@ -27,4 +28,41 @@ var Security = exports.Security = {
     return censored;
   }
 
-}
+};
+
+var Proxy = exports.Proxy = {
+  obReg: /\/\{/g,
+  cbReg: /\}/g,
+  formatUriSegment: function ( uriSegment ) {
+    // Build the endpoint path string, replace '/{param}' with '/:param'
+
+    return uriSegment.replace(this.obReg, '/:').replace(this.cbReg, '');
+
+  },
+
+  // TODO: Check if APIs often have string/int listed as a string parameter
+  // Ex api.com/{string}/bar becomes api.com/foo123/bar or only api.com/foo/bar
+  validateStrInt: function ( param, isInt ) {
+    if ( ( isInt && isNaN( param ) ) || ( !isInt && !isNaN( param ) ) ) {
+      this.respondInvPath();
+      return;
+    }
+  },
+
+  // Utility request to the remote of your choice
+  makeGetRequestTo: function( url, params, callback ) {
+    var fullUrl = url;
+    if ( params ) fullUrl += '?'
+    for ( param in params ) {
+      fullUrl += ( param + '=' + params[param] + '&' );
+    }
+    this.makeRequestTo( fullUrl, callback );
+  },
+
+  makeRequestTo: function ( url, callback ) {
+    var options = {
+      url: url, headers: { 'User-Agent': 'node.js' }
+    };
+    REQUEST( options, callback );
+  }
+};

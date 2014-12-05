@@ -18,6 +18,10 @@ require( './globals.js' );
 //*******************************************
 //* DATABASE INIT
 //*******************************************
+/**
+ * Creates connection to the mongo database
+ * @param {String} Config.db
+ */
 var connect = function() {
   var options = { server: { socketOptions: {keepAlive: 1 } } };
   mongoose.connect( CONFIG.db, options );
