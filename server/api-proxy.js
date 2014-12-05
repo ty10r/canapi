@@ -76,6 +76,14 @@ ApiProxy.prototype.init = function ( config, callback ) {
 
 
 
+
+
+//******************************************************
+//* API Proxy endpoint structure generation
+//* Section is to generate the structure of the API
+//* Proxy endpoints
+//******************************************************
+
 /**
  * Generates API Endpoints with their URI and parameter validation middleware
  * @function
@@ -278,8 +286,11 @@ ApiProxy.prototype.generateEnumValidator = function( enumList, isRequired ) {
 
 
 
+
+
+
 //******************************************************
-//* Middleward Generation
+//* URI Middleware Generation
 //* Section is to generate middle-ware for URI parameter
 //* type checking
 //******************************************************
@@ -329,6 +340,9 @@ ApiProxy.prototype.validateURIParam = function ( param, type ) {
 ApiProxy.prototype.respondInvPath = function( ) {
 	api.JsonResponse(INVPATHERROR, {}, 400 );
 }
+
+
+
 
 //********************************************************
 //* User Required Middleware
