@@ -24,11 +24,11 @@ var config = {
 			access_token: 'asdf',
 			logRequests: 'true'
 		},
-		{
-			name: 'Instagram',
-			raml: 'instagram.raml',
-			localPath: '/api-instagram-com'
-		}
+		// {
+		// 	name: 'Instagram',
+		// 	raml: 'instagram.raml',
+		// 	localPath: '/api-instagram-com'
+		// }
 	]
 }
 
