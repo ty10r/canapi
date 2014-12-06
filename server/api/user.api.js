@@ -15,6 +15,7 @@ exports.bind = function( app ) {
 	var userResponse = function( user, responseObj ) {
 		var censoredFields = { passwords: true, extAuthTokens: true };
 		var censoredUser = Utils.Security.censorResponse( user, censoredFields );
+		Utils.Security.setAuthCookie( user, responseObj );
 		api.JsonResponse( censoredUser, responseObj, 200 );
 	}
 
