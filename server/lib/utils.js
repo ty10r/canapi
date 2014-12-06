@@ -19,7 +19,7 @@ var Security = exports.Security = {
       this.makeSalt() ).digest( 'hex' );
   },
 
-  SetAuthCookie: function( user, response ) {
+  setAuthCookie: function( user, response ) {
       response.cookie( 'authtoken', user.authtoken, { maxAge: COOKIE_EXPIRATION, httpOnly: true, path: '/' } );
   },
 
