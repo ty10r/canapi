@@ -136,6 +136,7 @@ ApiProxy.prototype.buildEndpoint = function( res, absPath ) {
 	this.router.all( absPath, function( request, response, next ) {
 		response.locals._API = scope.config.name;
 		next();
+		return;
 	});
 
 	// Check if OAuth verification is required for all methods on this endpoint
@@ -156,6 +157,7 @@ ApiProxy.prototype.buildEndpoint = function( res, absPath ) {
 				return;
 			}
 			next();
+			return;
 		});
 	}
 
@@ -196,6 +198,7 @@ ApiProxy.prototype.makeRoute = function( absPath, methodObj ) {
 			if ( invalidParams ) {
 				api.JsonResponse( 'Errors: ' + invalidParams, response, 400 );
 				next();
+				return;
 			}
 
 			// make call to remote endpoint
@@ -204,6 +207,7 @@ ApiProxy.prototype.makeRoute = function( absPath, methodObj ) {
 				// return response
 				api.JsonResponse( body, response, res.statusCode );
 				next();
+				return;
 			});
 		});
 
@@ -218,6 +222,7 @@ ApiProxy.prototype.makeRoute = function( absPath, methodObj ) {
 				// return response
 				api.JsonResponse( body, response, res.statusCode );
 				next();
+				return;
 			});
 		});
 
@@ -230,6 +235,7 @@ ApiProxy.prototype.makeRoute = function( absPath, methodObj ) {
 				// return response
 				api.JsonResponse( body, response, res.statusCode );
 				next();
+				return;
 			});
 		})
 
@@ -241,6 +247,7 @@ ApiProxy.prototype.makeRoute = function( absPath, methodObj ) {
 				if ( error ) console.log( error );
 				api.JsonResponse( body, response, res.statusCode );
 				next();
+				return;
 			});
 		});
 	}
@@ -361,6 +368,7 @@ ApiProxy.prototype.validateURIParam = function ( param, type ) {
 		ProxyUtils.validateStrInt( paramValue, ( type == 'integer' ) );
 		req[param] = paramValue;
 		next();
+		return;
 	});
 };
 
@@ -418,6 +426,7 @@ ApiProxy.prototype.requireLogin = function() {
 			return;
 		}
 		next();
+		return;
 	};
 	return UserRequiredApi;
 }
