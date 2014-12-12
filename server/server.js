@@ -61,6 +61,8 @@ process.on( 'uncaughtException', function( error ) {
   console.error( error.stack ? error.stack : error );
   process.exit(1);
 });
+// this is always done anyway AND error.stack doesn't contain whole stack.
+// use some external logs 
 
 
 
